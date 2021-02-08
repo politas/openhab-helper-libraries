@@ -5,6 +5,7 @@ This module provides miscellaneous utility functions that are used across the co
 __all__ = [
     "validate_channel_uid",
     "validate_uid",
+    "get_item_value",
     "kw",
     "iround",
     "getItemValue",
