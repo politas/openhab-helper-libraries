@@ -19,6 +19,7 @@ __all__ = [
 
 import re
 import uuid
+from datetime import datetime
 
 try:
     from org.eclipse.smarthome.core.types import TypeParser
@@ -118,6 +119,46 @@ def validate_uid(uid):
     uid = re.sub(r"__+", "_", uid)
     return uid
 
+def get_item_value(item_or_item_name, default_value):
+    """
+    Returns the Item's value if the Item exists and is initialized, otherwise
+    returns the default value. ``itemRegistry.getItem`` will return an object
+    for uninitialized items, but it has less methods. ``itemRegistry.getItem``
+    will throw an ItemNotFoundException if the Item is not in the registry.
+
+    Args:
+        item_or_item_name (Item or str): name of the Item
+        default_value (int, float, ON, OFF, OPEN, CLOSED, str, DateTime): the default
+            value
+
+    Returns:
+        int, float, ON, OFF, OPEN, CLOSED, str, DateTime, or None: the state if
+            the Item converted to the type of default value, or the default
+            value if the Item's state is NULL or UNDEF
+    """
+    
+    item = itemRegistry.getItem(item_or_item_name) if isinstance(item_or_item_name, basestring) else item_or_item_name
+    if isinstance(default_value, int):
+        return item.state.intValue() if item.state not in [NULL, UNDEF] else default_value
+    elif isinstance(default_value, float):
+        return item.state.floatValue() if item.state not in [NULL, UNDEF] else default_value
+    elif default_value in [ON, OFF, OPEN, CLOSED]:
+        return item.state if item.state not in [NULL, UNDEF] else default_value
+    elif isinstance(default_value, str):
+        return item.state.toFullString() if item.state not in [NULL, UNDEF] else default_value
+    elif JodaDateTime and isinstance(default_value, JodaDateTime):
+        # We return a org.joda.time.DateTime from a org.eclipse.smarthome.core.library.types.DateTimeType
+        return to_joda_datetime(item.state) if item.state not in [NULL, UNDEF] else default_value
+    elif isinstance(default_value, ZonedDateTime):
+        # We return a java.time.ZonedDateTime
+        return to_java_zoneddatetime(item.state) if item.state not in [NULL, UNDEF] else default_value
+    elif isinstance(default_value, datetime):
+        # We return a datetime.datetime from
+        return to_python_datetime(item.state) if item.state not in [NULL, UNDEF] else default_value
+    else:
+        LOG.warn("The type of the passed default value is not handled")
+        return None
+	
 
 def post_update_if_different(item_or_item_name, new_value, sendACommand=False, floatPrecision=None):
     """
