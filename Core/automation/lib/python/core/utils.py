@@ -37,8 +37,9 @@ except:
     JodaDateTime = None
 
 from java.time import ZonedDateTime
+from java.sql import Timestamp
 
-from core.date import to_java_zoneddatetime, to_joda_datetime
+from core.date import to_java_zoneddatetime, to_joda_datetime, to_python_datetime
 from core.log import getLogger
 from core.jsr223.scope import itemRegistry, StringType, NULL, UNDEF, ON, OFF, OPEN, CLOSED, events, things
 
@@ -153,7 +154,10 @@ def get_item_value(item_or_item_name, default_value):
         # We return a java.time.ZonedDateTime
         return to_java_zoneddatetime(item.state) if item.state not in [NULL, UNDEF] else default_value
     elif isinstance(default_value, datetime):
-        # We return a datetime.datetime from
+        # We return a datetime.datetime
+        return to_python_datetime(item.state) if item.state not in [NULL, UNDEF] else default_value
+    elif isinstance(default_value, Timestamp):
+        # Jython reports datetime.datetime items as this underlying type
         return to_python_datetime(item.state) if item.state not in [NULL, UNDEF] else default_value
     else:
         LOG.warn("The type of the passed default value is not handled")
