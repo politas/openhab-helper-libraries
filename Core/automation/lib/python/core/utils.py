@@ -20,7 +20,6 @@ __all__ = [
 
 import re
 import uuid
-from datetime import datetime
 
 try:
     from org.eclipse.smarthome.core.types import TypeParser
@@ -38,11 +37,10 @@ except:
     JodaDateTime = None
 
 from java.time import ZonedDateTime
-from java.sql import Timestamp
 
-from core.date import to_java_zoneddatetime, to_joda_datetime, to_python_datetime
+from core.date import to_java_zoneddatetime, to_joda_datetime
 from core.log import getLogger
-from core.jsr223.scope import itemRegistry, StringType, NULL, UNDEF, ON, OFF, OPEN, CLOSED, events, things
+from core.jsr223.scope import itemRegistry, StringType, NULL, UNDEF, ON, OFF, OPEN, CLOSED, events, things, QuantityType, UnDefType
 
 
 LOG = getLogger(u"core.utils")
@@ -121,49 +119,55 @@ def validate_uid(uid):
     uid = re.sub(r"__+", "_", uid)
     return uid
 
-def get_item_value(item_or_item_name, default_value):
+def get_item_value(item_or_item_name, return_type=None, default=None, unit=None):
     """
-    Returns the Item's value if the Item exists and is initialized, otherwise
-    returns the default value. ``itemRegistry.getItem`` will return an object
-    for uninitialized items, but it has less methods. ``itemRegistry.getItem``
-    will throw an ItemNotFoundException if the Item is not in the registry.
+    Returns the Item's value if the Item exists and is initialized. Returned item
+    type will be dependent on the item's type. If return_type is supplied, the Item 
+    will be returned as that type if possible, otherwise the default will be returned.
+    If no default is supplied, a non-existent/uninitialized Item or an Item that cannot 
+    be converted to return_type will return None 
 
     Args:
         item_or_item_name (Item or str): name of the Item
-        default_value (int, float, ON, OFF, OPEN, CLOSED, str, DateTime): the default
-            value
+        return_type (Python data type): item type to be returned. If the Item cannot be 
+            converted to return_type, default will be returned 
+        default (int, float, ON, OFF, OPEN, CLOSED, str, DateTime): the default
+            value to be returned if the Item is non-existent/unitilialized or cannot
+            be converted to return_type
+        unit (QuantityType): Convert value of Item to specified units
 
     Returns:
-        int, float, ON, OFF, OPEN, CLOSED, str, DateTime, or None: the state if
-            the Item converted to the type of default value, or the default
-            value if the Item's state is NULL or UNDEF
+        int, float, ON, OFF, OPEN, CLOSED, str, DateTime, return_type or None: the state 
+            of the Item as a suitable type, or converted to return_type if given; or the 
+            default value if the Item's state cannot be converted or is NULL or UNDEF; 
+            otherise None
     """
     
-    item = itemRegistry.getItem(item_or_item_name) if isinstance(item_or_item_name, basestring) else item_or_item_name
-    if isinstance(default_value, int):
-        return item.state.intValue() if item.state not in [NULL, UNDEF] else default_value
-    elif isinstance(default_value, float):
-        return item.state.floatValue() if item.state not in [NULL, UNDEF] else default_value
-    elif default_value in [ON, OFF, OPEN, CLOSED]:
-        return item.state if item.state not in [NULL, UNDEF] else default_value
-    elif isinstance(default_value, str):
-        return item.state.toFullString() if item.state not in [NULL, UNDEF] else default_value
-    elif JodaDateTime and isinstance(default_value, JodaDateTime):
-        # We return a org.joda.time.DateTime from a org.eclipse.smarthome.core.library.types.DateTimeType
-        return to_joda_datetime(item.state) if item.state not in [NULL, UNDEF] else default_value
-    elif isinstance(default_value, ZonedDateTime):
-        # We return a java.time.ZonedDateTime
-        return to_java_zoneddatetime(item.state) if item.state not in [NULL, UNDEF] else default_value
-    elif isinstance(default_value, datetime):
-        # We return a datetime.datetime
-        return to_python_datetime(item.state) if item.state not in [NULL, UNDEF] else default_value
-    elif isinstance(default_value, Timestamp):
-        # Jython reports datetime.datetime items as this underlying type
-        return to_python_datetime(item.state) if item.state not in [NULL, UNDEF] else default_value
+    type_methods = {int: "intValue", float: "floatValue", str: "toString"}
+    item = validate_item(item_or_item_name) # type: t.Union[GenericItem, None]
+    if item:
+        state = item.getState() # type: State
+        if isinstance(state, QuantityType) and unit is not None:
+            try:
+                state = state.toUnit(unit)
+            except:
+                LOG.warn(u"Item '{}' cannot be converted to '{}' units, returning default value".format(item.name, unit))
+                return default
+        if not isinstance(state, UnDefType):
+            if return_type is None:
+                return state
+            elif return_type in type_methods:
+                if hasattr(state, type_methods[return_type]):
+                    state = getattr(state, type_methods[return_type])()
+            try: # attempt to cast
+                return return_type(state)
+            except:
+                LOG.warn(u"Item '{}' cannot be converted to '{}' type, returning default value".format(item.name, return_type))
+                pass
     else:
-        LOG.warn("The type of the passed default value is not handled")
-        return None
-	
+        LOG.warn(u"Item does not exist or is uninitialized, returning default value")
+    return default
+    
 
 def post_update_if_different(item_or_item_name, new_value, sendACommand=False, floatPrecision=None):
     """
