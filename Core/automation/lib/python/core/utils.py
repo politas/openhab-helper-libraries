@@ -5,7 +5,6 @@ This module provides miscellaneous utility functions that are used across the co
 __all__ = [
     "validate_channel_uid",
     "validate_uid",
-    "get_item_value",
     "kw",
     "iround",
     "getItemValue",
@@ -15,13 +14,13 @@ __all__ = [
     "post_update_if_different",
     "postUpdateCheckFirst",
     "send_command_if_different",
-    "sendCommandCheckFirst"
+    "sendCommandCheckFirst",
+    "get_item_state",
 ]
 
 import re
 import uuid
 from datetime import datetime
-
 try:
     from org.eclipse.smarthome.core.types import TypeParser
 except:
@@ -35,13 +34,12 @@ except:
 try:
     from org.joda.time import DateTime as JodaDateTime
 except:
-    # OH3 does not have Joda Time
     JodaDateTime = None
 
 from java.time import ZonedDateTime
 from java.util import Calendar as JavaCalendar
 
-from core.date import to_java_zoneddatetime, to_joda_datetime
+from core.date import to_python_datetime, to_java_zoneddatetime, to_joda_datetime, to_java_calendar
 from core.log import getLogger
 from core.jsr223.scope import itemRegistry, StringType, NULL, UNDEF, ON, OFF, OPEN, CLOSED, events, things, QuantityType, UnDefType
 
@@ -121,62 +119,6 @@ def validate_uid(uid):
         uid = "{}_{}".format("jython", uid)
     uid = re.sub(r"__+", "_", uid)
     return uid
-
-def get_item_value(item_or_item_name, return_type=None, default=None, unit=None):
-    """
-    Returns the Item's value if the Item exists and is initialized, otherwise default. 
-    Returned item type will be dependent on the item's type. If return_type is supplied,
-    the Item will be returned as that type if possible, otherwise the default will be 
-    returned. Item value will be converted to the provided unit type if possible; otherwise,
-    the default will be returned. If no default is supplied and an Item value cannot be 
-    returned, None is returned 
-
-    Args:
-        item_or_item_name (Item or str): name of the Item
-        return_type (int, float, str): item type to be returned. If the Item cannot be 
-            converted to return_type, default will be returned 
-        default (int, float, ON, OFF, OPEN, CLOSED, str, DateTime): the default
-            value to be returned if the Item is non-existent/uninitialized or cannot
-            be converted to return_type
-        unit (QuantityType): Convert value of Item to specified units
-            https://www.openhab.org/docs/concepts/units-of-measurement.html
-
-    Returns:
-        int, float, ON, OFF, OPEN, CLOSED, str, DateTime, or None: the state of the Item
-            as a suitable type, or converted to return_type if given; or the default value 
-            if the Item's state cannot be converted or is NULL or UNDEF; otherwise None
-    """
-    
-    type_methods = {int: "intValue", float: "floatValue", str: "toString"}
-    item = validate_item(item_or_item_name) # type: t.Union[GenericItem, None]
-    if item:
-        state = item.getState() # type: State
-        if isinstance(state, QuantityType) and unit is not None:
-            try:
-                state = state.toUnit(unit)
-            except:
-                LOG.warn(u"Item '{}' cannot be converted to '{}' units, returning default value".format(item.name, unit))
-                return default
-        if not isinstance(state, UnDefType):
-            if return_type is None:
-                return state
-            elif return_type in type_methods:
-                if hasattr(state, type_methods[return_type]):
-                    state = getattr(state, type_methods[return_type])()
-            try: # attempt to cast
-                return return_type(state)
-            except:
-                LOG.warn(u"Item '{}' is a '{}', cannot be converted to '{}' type, returning default value".format(item.name, type(state), return_type))
-                pass
-    else:
-        LOG.warn(u"Item does not exist or is uninitialized, returning default value")
-    return default
-
-def get_item_value_or_default(item_or_item_name, default_value, return_type=None, unit=None):
-    """
-    See get_item_or_default, this is a drop-in replacement for old getItemValue
-    """
-    return get_item_value(item_or_item_name, return_type=return_type, default=default_value, unit=unit)
 
 def post_update_if_different(item_or_item_name, new_value, sendACommand=False, floatPrecision=None):
     """
@@ -374,3 +316,61 @@ def postUpdate(item_or_item_name, new_value):
     LOG.warn("The 'core.utils.postUpdate' function is pending deprecation.")
     item = itemRegistry.getItem(item_or_item_name) if isinstance(item_or_item_name, basestring) else item_or_item_name
     events.postUpdate(item, new_value)
+
+def get_item_state(item_or_item_name, default=None, return_type=None, unit=None):
+    """
+    Gets an Item's state, optionally converting it to a specified type and/or unit 
+    for Quantity Types 
+
+    Args:
+        item_or_item_name (GenericItem or str): Item or name of the Item
+        default (Any): value to return if Item does not exist, if Item's state is ``NULL``
+            or ``UNDEF`` or if attempts to convert Item's state fail.
+        return_type (Any): Python or Java data type to attempt to return the Item's state
+            as, if not provided or `None` no conversion will be done. If the conversion
+            fails the default will be returned 
+        unit (str): if Item's state is a QuantityType, attempt to convert to this unit. This 
+            is done before any conversion attempts if ``return_type`` is provided.
+
+    Returns:
+        Item's state if Item exists and its state is not ``NULL`` or ``UNDEF`` if no
+        ``return_type`` or ``unit`` is provided, otherwise ``default`` will be returned.
+        If ``return_type`` is provided the Item's state will be returned as that type if
+        possible, otherwise ``default`` will be returned.
+        If ``unit`` is provided and the Item's state is a QuantityType it will be converted
+        to those units before attempting to convert to ``return_type``, if the unit conversion
+        fails ``defualt`` will be returned.
+    """
+    
+    type_methods = {int: "intValue", float: "floatValue", str: "toString"}
+    conv_methods = {
+        datetime: to_python_datetime,
+        ZonedDateTime: to_java_zoneddatetime,
+        JodaDateTime: to_joda_datetime,
+        JavaCalendar: to_java_calendar
+    }
+    item = validate_item(item_or_item_name) # type: t.Union[GenericItem, None]
+    if item:
+        state = item.getState() # type: State
+        if isinstance(state, QuantityType) and unit is not None:
+            try:
+                state = state.toUnit(unit)
+            except:
+                LOG.warn(u"Item '{}' state '{}' cannot be converted to '{}' units".format(item.name, item.state, unit))
+                return default
+        if not isinstance(state, UnDefType):
+            if return_type is None:
+                return state
+            elif return_type in type_methods:
+                if hasattr(state, type_methods[return_type]):
+                    state = getattr(state, type_methods[return_type])()
+            elif return_type in conv_methods:
+                return_type = conv_methods[return_type]
+            try: # attempt to cast
+                return return_type(state)
+            except:
+                LOG.warn(u"Item '{}' type '{}', cannot be converted to '{}'".format(item.name, type(state), return_type))
+                pass
+    else:
+        LOG.warn(u"Item does not exist or is uninitialized, returning default value")
+    return default
