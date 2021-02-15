@@ -20,6 +20,7 @@ __all__ = [
 
 import re
 import uuid
+from datetime import datetime
 
 try:
     from org.eclipse.smarthome.core.types import TypeParser
@@ -34,9 +35,11 @@ except:
 try:
     from org.joda.time import DateTime as JodaDateTime
 except:
+    # OH3 does not have Joda Time
     JodaDateTime = None
 
 from java.time import ZonedDateTime
+from java.util import Calendar as JavaCalendar
 
 from core.date import to_java_zoneddatetime, to_joda_datetime
 from core.log import getLogger
@@ -121,26 +124,27 @@ def validate_uid(uid):
 
 def get_item_value(item_or_item_name, return_type=None, default=None, unit=None):
     """
-    Returns the Item's value if the Item exists and is initialized. Returned item
-    type will be dependent on the item's type. If return_type is supplied, the Item 
-    will be returned as that type if possible, otherwise the default will be returned.
-    If no default is supplied, a non-existent/uninitialized Item or an Item that cannot 
-    be converted to return_type will return None 
+    Returns the Item's value if the Item exists and is initialized, otherwise default. 
+    Returned item type will be dependent on the item's type. If return_type is supplied,
+    the Item will be returned as that type if possible, otherwise the default will be 
+    returned. Item value will be converted to the provided unit type if possible; otherwise,
+    the default will be returned. If no default is supplied and an Item value cannot be 
+    returned, None is returned 
 
     Args:
         item_or_item_name (Item or str): name of the Item
-        return_type (Python data type): item type to be returned. If the Item cannot be 
+        return_type (int, float, str): item type to be returned. If the Item cannot be 
             converted to return_type, default will be returned 
         default (int, float, ON, OFF, OPEN, CLOSED, str, DateTime): the default
-            value to be returned if the Item is non-existent/unitilialized or cannot
+            value to be returned if the Item is non-existent/uninitialized or cannot
             be converted to return_type
         unit (QuantityType): Convert value of Item to specified units
+            https://www.openhab.org/docs/concepts/units-of-measurement.html
 
     Returns:
-        int, float, ON, OFF, OPEN, CLOSED, str, DateTime, return_type or None: the state 
-            of the Item as a suitable type, or converted to return_type if given; or the 
-            default value if the Item's state cannot be converted or is NULL or UNDEF; 
-            otherise None
+        int, float, ON, OFF, OPEN, CLOSED, str, DateTime, or None: the state of the Item
+            as a suitable type, or converted to return_type if given; or the default value 
+            if the Item's state cannot be converted or is NULL or UNDEF; otherwise None
     """
     
     type_methods = {int: "intValue", float: "floatValue", str: "toString"}
@@ -162,12 +166,17 @@ def get_item_value(item_or_item_name, return_type=None, default=None, unit=None)
             try: # attempt to cast
                 return return_type(state)
             except:
-                LOG.warn(u"Item '{}' cannot be converted to '{}' type, returning default value".format(item.name, return_type))
+                LOG.warn(u"Item '{}' is a '{}', cannot be converted to '{}' type, returning default value".format(item.name, type(state), return_type))
                 pass
     else:
         LOG.warn(u"Item does not exist or is uninitialized, returning default value")
     return default
-    
+
+def get_item_value_or_default(item_or_item_name, default_value, return_type=None, unit=None):
+    """
+    See get_item_or_default, this is a drop-in replacement for old getItemValue
+    """
+    return get_item_value(item_or_item_name, return_type=return_type, default=default_value, unit=unit)
 
 def post_update_if_different(item_or_item_name, new_value, sendACommand=False, floatPrecision=None):
     """
