@@ -331,6 +331,7 @@ def get_item_state(item_or_item_name, default=None, return_type=None, unit=None)
             fails the default will be returned 
         unit (str): if Item's state is a QuantityType, attempt to convert to this unit. This 
             is done before any conversion attempts if ``return_type`` is provided.
+            https://www.openhab.org/docs/concepts/units-of-measurement.html
 
     Returns:
         Item's state if Item exists and its state is not ``NULL`` or ``UNDEF`` if no
@@ -339,7 +340,7 @@ def get_item_state(item_or_item_name, default=None, return_type=None, unit=None)
         possible, otherwise ``default`` will be returned.
         If ``unit`` is provided and the Item's state is a QuantityType it will be converted
         to those units before attempting to convert to ``return_type``, if the unit conversion
-        fails ``defualt`` will be returned.
+        fails ``default`` will be returned.
     """
     
     type_methods = {int: "intValue", float: "floatValue", str: "toString"}
@@ -371,6 +372,4 @@ def get_item_state(item_or_item_name, default=None, return_type=None, unit=None)
             except:
                 LOG.warn(u"Item '{}' type '{}', cannot be converted to '{}'".format(item.name, type(state), return_type))
                 pass
-    else:
-        LOG.warn(u"Item does not exist or is uninitialized, returning default value")
     return default
