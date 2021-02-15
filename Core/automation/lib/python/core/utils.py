@@ -370,6 +370,6 @@ def get_item_state(item_or_item_name, default=None, return_type=None, unit=None)
             try: # attempt to cast
                 return return_type(state)
             except:
-                LOG.warn(u"Item '{}' type '{}', cannot be converted to '{}'".format(item.name, type(state), return_type))
+                LOG.warn(u"Item '{}' state is type '{}', cannot be converted to '{}'".format(item.name, type(state), return_type))
                 pass
     return default
