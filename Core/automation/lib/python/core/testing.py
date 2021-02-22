@@ -56,7 +56,7 @@ def _run_test(test_case, out = None, verbosity=None):
 
 def run_test(test_case, logger=logging.root, verbosity=None):
     logger.info(u"Running tests: '{}'".format(test_case.__name__))
-    if verbosity is not None:
+    if isinstance(verbosity, int):
         output = TemporaryFile()
         status, result = _run_test(test_case, output, verbosity)
         output.seek(0)
