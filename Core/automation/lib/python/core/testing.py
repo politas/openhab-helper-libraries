@@ -68,10 +68,10 @@ def run_test(test_case, logger=logging.root, verbosity=None):
         output.close()
     else:
         status, result = _run_test(test_case, verbosity)
-        if status:
-            logger.info(result)
-        else:
-            logger.error(result)
+    if status:
+        logger.info(result)
+    else:
+        logger.error(result)
     return (status, result)
 
 
