@@ -55,6 +55,21 @@ def _run_test(test_case, out = None, verbosity=None):
 
 
 def run_test(test_case, logger=logging.root, verbosity=None):
+    """
+    Runs a provided unittest.TestCase and sends the output to the log
+
+    Args:
+        test_case (unittest.TestCase): The test case (class) which will be run
+        logger: (optional) predefined core.log.logger instance. If not provided a basic default
+            logger will be used.
+        verbosity (int): (optional) Verbosity parameter to pass to the test case runner. If
+            provided, runner output will be directed to a temporary file and then fed to the
+            log line by line. If not provided, basic formatted results will be output to the log
+            without use of any temporary file.
+    Returns:
+        bool: ``True``, if no failures or errors were found, else ``False``
+        str: a unicode string containing json formatted test results.
+    """
     logger.info(u"Running tests: '{}'".format(test_case.__name__))
     if isinstance(verbosity, int):
         output = TemporaryFile()
@@ -67,11 +82,11 @@ def run_test(test_case, logger=logging.root, verbosity=None):
                 logger.error(line)
         output.close()
     else:
-        status, result = _run_test(test_case, verbosity)
-    if status:
-        logger.info(result)
-    else:
-        logger.error(result)
+        status, result = _run_test(test_case)
+        if status:
+            logger.info(result)
+        else:
+            logger.error(result)
     return (status, result)
 
 
