@@ -102,50 +102,66 @@ class CoreUtilsTestCase(unittest.TestCase):
         test_value = QuantityType(u"55.0 °C")
         expected = QuantityType(u"131.0 °F")
         test_unit = u"°F"
-        self.get_item_state_returns_equality("DogeTemp", "Number", test_value, expected, unit=test_unit)
+        self.get_item_state_returns_equality("DogeTemp", "Number", test_value, expected,
+                                            unit=test_unit)
+
+    def test_get_item_state_returns_farenheit_int_for_number_item_with_unit_and_return_type(self):
+        test_value = QuantityType(u"55.0 °C")
+        expected = int(131)
+        test_unit = u"°F"
+        test_return = int
+        self.get_item_state_returns_equality("DogeTemp", "Number", test_value, expected,
+                                            return_type=test_return, unit=test_unit)
 
     def test_get_item_state_returns_expected_string_for_number_item_with_return_type(self):
         test_value = DecimalType(55.5)
         expected = "55.5"
         test_return = str
-        self.get_item_state_returns_equality("DogeNumber", "Number", test_value, expected, return_type=test_return)
+        self.get_item_state_returns_equality("DogeNumber", "Number", test_value, expected,
+                                            return_type=test_return)
 
     def test_get_item_state_returns_expected_int_for_number_item_with_return_type(self):
         test_value = DecimalType(55.5)
         expected = int(55)
         test_return = int
-        self.get_item_state_returns_equality("DogeNumber", "Number", test_value, expected, return_type=test_return)
+        self.get_item_state_returns_equality("DogeNumber", "Number", test_value, expected,
+                                            return_type=test_return)
         
     def test_get_item_state_returns_expected_float_for_number_item_with_return_type(self):
         test_value = DecimalType(55.5)
         expected = float(55.5)
         test_return = float
-        self.get_item_state_returns_equality("DogeNumber", "Number", test_value, expected, return_type=test_return)
+        self.get_item_state_returns_equality("DogeNumber", "Number", test_value, expected,
+                                            return_type=test_return)
 
     def test_get_item_state_returns_expected_python_datetime_for_DateTime_item_with_return_type(self):
         test_value = DateTimeType("1991-12-21T12:21:19")
         expected = to_python_datetime(test_value)
         test_return = datetime
-        self.get_item_state_returns_equality("DogeDate", "DateTime", test_value, expected, return_type=test_return)
+        self.get_item_state_returns_equality("DogeDate", "DateTime", test_value, expected,
+                                            return_type=test_return)
 
     @unittest.skipIf(JodaDateTime is None, "Joda DateTime not supported")
     def test_get_item_state_returns_expected_joda_datetime_for_DateTime_item_with_return_type(self):
         test_value = DateTimeType("1991-12-21T12:21:19")
         expected = to_joda_datetime(test_value)
         test_return = JodaDateTime
-        self.get_item_state_returns_equality("DogeDate", "DateTime", test_value, expected, return_type=test_return)
+        self.get_item_state_returns_equality("DogeDate", "DateTime", test_value, expected,
+                                            return_type=test_return)
 
     def test_get_item_state_returns_expected_java_zonedatetime_for_DateTime_item_with_return_type(self):
         test_value = DateTimeType("1991-12-21T12:21:19")
         expected = to_java_zoneddatetime(test_value)
         test_return = ZonedDateTime
-        self.get_item_state_returns_equality("DogeDate", "DateTime", test_value, expected, return_type=test_return)
+        self.get_item_state_returns_equality("DogeDate", "DateTime", test_value, expected,
+                                            return_type=test_return)
 
     def test_get_item_state_returns_expected_java_calendar_for_DateTime_item_with_return_type(self):
         test_value = DateTimeType("1991-12-21T12:21:19")
         expected = to_java_calendar(test_value)
         test_return = JavaCalendar
-        self.get_item_state_returns_equality("DogeDate", "DateTime", test_value, expected, return_type=test_return)
+        self.get_item_state_returns_equality("DogeDate", "DateTime", test_value, expected,
+                                            return_type=test_return)
 
     def test_get_item_state_returns_StringType_for_string_item(self):
         test_value = StringType("5 Dogecoins")
