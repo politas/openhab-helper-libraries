@@ -319,28 +319,31 @@ def postUpdate(item_or_item_name, new_value):
 
 def get_item_state(item_or_item_name, default=None, return_type=None, unit=None):
     """
-    Gets an Item's state, optionally converting it to a specified type and/or unit 
-    for Quantity Types 
+    Gets an Item's state, optionally converting it to a specified type and/or
+    unit for Quantity Types 
 
     Args:
         item_or_item_name (GenericItem or str): Item or name of the Item
-        default (Any): value to return if Item does not exist, if Item's state is ``NULL``
-            or ``UNDEF`` or if attempts to convert Item's state fail.
-        return_type (Any): Python or Java data type to attempt to return the Item's state
-            as, if not provided or `None` no conversion will be done. If the conversion
-            fails the default will be returned 
-        unit (str): if Item's state is a QuantityType, attempt to convert to this unit. This 
-            is done before any conversion attempts if ``return_type`` is provided.
+        default (Any): value to return if Item does not exist, if Item's state
+        	is ``NULL`` or ``UNDEF`` or if attempts to convert Item's state fail.
+        return_type (Any): Python or Java data type to attempt to return the
+        	Item's state as, if not provided or `None` no conversion will be
+        	done. If the conversion fails the default will be returned.
+        unit (str): if Item's state is a QuantityType, attempt to convert to
+        	this unit. This is done before any conversion attempts if
+        	``return_type`` is provided.
             https://www.openhab.org/docs/concepts/units-of-measurement.html
 
     Returns:
-        Item's state if Item exists and its state is not ``NULL`` or ``UNDEF`` if no
-        ``return_type`` or ``unit`` is provided, otherwise ``default`` will be returned.
-        If ``return_type`` is provided the Item's state will be returned as that type if
-        possible, otherwise ``default`` will be returned.
-        If ``unit`` is provided and the Item's state is a QuantityType it will be converted
-        to those units before attempting to convert to ``return_type``, if the unit conversion
-        fails ``default`` will be returned.
+        Item's state if Item exists and its state is not ``NULL`` or ``UNDEF``
+        if no ``return_type`` or ``unit`` is provided, otherwise ``default``
+        will be returned.
+        If ``return_type`` is provided the Item's state will be returned as that
+        type if possible, otherwise ``default`` will be returned.
+        If ``unit`` is provided and the Item's state is a QuantityType it will
+        be converted to those units before attempting to convert to
+        ``return_type``, if the unit conversion fails ``default`` will be
+        returned.
     """
     
     type_methods = {int: "intValue", float: "floatValue", str: "toString"}
