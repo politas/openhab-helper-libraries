@@ -1,4 +1,8 @@
-""" Test helper library  """
+""" 
+Test helper library  `core.utils.py`
+
+To run this test suite, copy this file to `$OPENHAB-CONF/automation/jsr223/python/personal/`
+"""
 
 import unittest
 import time
