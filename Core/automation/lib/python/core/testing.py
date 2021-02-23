@@ -46,7 +46,7 @@ def _run_test(test_case, out = None, verbosity=None):
     if out is not None:
         runner = unittest.TextTestRunner(out, verbosity=verbosity)
     else:
-        runner = unittest.TextTestRunner()
+        runner = unittest.TextTestRunner(resultclass=unittest.TestResult)
     result = runner.run(suite)
     json_result = _RESULT_TEMPLATE.format(
         run=result.testsRun, errors=_format_errors(result.errors),
